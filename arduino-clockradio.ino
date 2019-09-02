@@ -26,7 +26,7 @@ void setup() {
 
     ht.begin(0x01);
     ht.define16segFont((uint16_t *)&fontTable);
-    ht.setBrightness(10);
+    ht.setBrightness(5);
 
     ht.set16Seg(0, 'T');
     ht.set16Seg(1, 'i');
@@ -100,21 +100,37 @@ void setup() {
 void loop() {
     // Update Clock Display
 
+    uint8_t hours = (localSeconds % 86400L)/ 3600;
+    uint8_t minutes = (localSeconds % 3600) / 60;
+    uint8_t seconds = localSeconds % 60;
+
+    const char* digits = "0123456789";
+
     // print the hour, minute and second:
     Serial.print("The time is ");       // UTC is the time at Greenwich Meridian (GMT)
-    Serial.print((localSeconds  % 86400L) / 3600); // print the hour (86400 equals secs per day)
-    Serial.print(':');
-    if (((localSeconds % 3600) / 60) < 10) {
-        // In the first 10 minutes of each hour, we'll want a leading '0'
-        Serial.print('0');
-    }
-    Serial.print((localSeconds  % 3600) / 60); // print the minute (3600 equals secs per minute)
-    Serial.print(':');
-    if ((localSeconds % 60) < 10) {
-        // In the first 10 seconds of each minute, we'll want a leading '0'
-        Serial.print('0');
-    }
-    Serial.println(localSeconds % 60); // print the second
+    Serial.print(hours);
+    Serial.print(":");
+    Serial.print(minutes);
+    Serial.print(":");
+    Serial.println(seconds);
+
+    if (hours >= 10)
+        ht.set16Seg(0, digits[int(hours / 10)]);
+    else
+        ht.set16Seg(0, ' ');
+    ht.set16Seg(1, digits[hours % 10]);
+
+    // Use the dot as a colon
+    // TODO: Could it flash?
+    ht.displayRam[3] |= 0b01000000;
+
+    if (minutes >= 10)
+        ht.set16Seg(2, digits[int(minutes / 10)]);
+    else
+        ht.set16Seg(2, '0');
+    ht.set16Seg(3, digits[minutes % 10]);
+
+    ht.sendLed();
 
     delay(60000);
     localSeconds += 60;
