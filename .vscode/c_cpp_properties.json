@@ -6,7 +6,8 @@
                 "/Users/adamm/Library/Arduino15/packages/esp8266/tools/**",
                 "/Users/adamm/Library/Arduino15/packages/esp8266/hardware/esp8266/2.5.0/**",
                 "/Users/adamm/Library/Arduino15/packages/arduino/tools/**",
-                "/Users/adamm/Documents/Arduino/libraries/**"
+                "/Users/adamm/Documents/Arduino/libraries/**",
+                "/Users/adamm/Library/Arduino15/packages/esp8266/hardware/esp8266/2.5.2/**"
             ],
             "forcedInclude": [],
             "macFrameworkPath": [
