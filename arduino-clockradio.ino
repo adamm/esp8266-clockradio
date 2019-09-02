@@ -95,6 +95,12 @@ void setup() {
 
         localSeconds = epoch + gmtOffset_sec;
     }
+
+    Serial.println("Modem to sleep!");
+    WiFi.disconnect();
+    WiFi.mode(WIFI_OFF);
+    WiFi.forceSleepBegin();
+    delay(1);
 }
 
 void loop() {
