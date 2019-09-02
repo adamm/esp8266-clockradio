@@ -19,9 +19,20 @@ const int   daylightOffset_sec = 3600;
 unsigned long localSeconds = 0;
 
 WiFiUDP udp;
+HT16K33 ht;
 
 void setup() {
     Serial.begin(115200);
+
+    ht.begin(0x01);
+    ht.define16segFont((uint16_t *)&fontTable);
+    ht.setBrightness(10);
+
+    ht.set16Seg(0, 'T');
+    ht.set16Seg(1, 'i');
+    ht.set16Seg(2, 'm');
+    ht.set16Seg(3, 'e');
+    ht.sendLed();
 
     // Initialize Wifi
 
@@ -94,14 +105,14 @@ void loop() {
     Serial.print((localSeconds  % 86400L) / 3600); // print the hour (86400 equals secs per day)
     Serial.print(':');
     if (((localSeconds % 3600) / 60) < 10) {
-    // In the first 10 minutes of each hour, we'll want a leading '0'
-    Serial.print('0');
+        // In the first 10 minutes of each hour, we'll want a leading '0'
+        Serial.print('0');
     }
     Serial.print((localSeconds  % 3600) / 60); // print the minute (3600 equals secs per minute)
     Serial.print(':');
     if ((localSeconds % 60) < 10) {
-    // In the first 10 seconds of each minute, we'll want a leading '0'
-    Serial.print('0');
+        // In the first 10 seconds of each minute, we'll want a leading '0'
+        Serial.print('0');
     }
     Serial.println(localSeconds % 60); // print the second
 

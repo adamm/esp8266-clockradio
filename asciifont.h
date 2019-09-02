@@ -10,7 +10,7 @@
 //    -----d-----  o
 //
 
-static const uint16_t fontTable[] PROGMEM ={
+static const uint16_t fontTable[] = {
   //oonmlkjihgfedcba
   0b0000000000000000,
   0b0000000000000000,
