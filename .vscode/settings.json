@@ -1,0 +1,4 @@
+{
+    "arduino.logLevel": "verbose",
+    "C_Cpp.errorSquiggles": "Disabled"
+}
