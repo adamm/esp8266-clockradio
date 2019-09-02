@@ -14,8 +14,9 @@ IPAddress   ntpServerIP;
 const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
 byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
 
-const long  gmtOffset_sec = 3600;
+const long  gmtOffset_sec = -6 * 3600;
 const int   daylightOffset_sec = 3600;
+unsigned long localSeconds = 0;
 
 WiFiUDP udp;
 
@@ -81,29 +82,31 @@ void setup() {
         // print Unix time:
         Serial.println(epoch);
 
-
-        // print the hour, minute and second:
-        Serial.print("The UTC time is ");       // UTC is the time at Greenwich Meridian (GMT)
-        Serial.print((epoch  % 86400L) / 3600); // print the hour (86400 equals secs per day)
-        Serial.print(':');
-        if (((epoch % 3600) / 60) < 10) {
-        // In the first 10 minutes of each hour, we'll want a leading '0'
-        Serial.print('0');
-        }
-        Serial.print((epoch  % 3600) / 60); // print the minute (3600 equals secs per minute)
-        Serial.print(':');
-        if ((epoch % 60) < 10) {
-        // In the first 10 seconds of each minute, we'll want a leading '0'
-        Serial.print('0');
-        }
-        Serial.println(epoch % 60); // print the second
+        localSeconds = epoch + gmtOffset_sec;
     }
 }
 
 void loop() {
     // Update Clock Display
 
-    delay(1000);
+    // print the hour, minute and second:
+    Serial.print("The time is ");       // UTC is the time at Greenwich Meridian (GMT)
+    Serial.print((localSeconds  % 86400L) / 3600); // print the hour (86400 equals secs per day)
+    Serial.print(':');
+    if (((localSeconds % 3600) / 60) < 10) {
+    // In the first 10 minutes of each hour, we'll want a leading '0'
+    Serial.print('0');
+    }
+    Serial.print((localSeconds  % 3600) / 60); // print the minute (3600 equals secs per minute)
+    Serial.print(':');
+    if ((localSeconds % 60) < 10) {
+    // In the first 10 seconds of each minute, we'll want a leading '0'
+    Serial.print('0');
+    }
+    Serial.println(localSeconds % 60); // print the second
+
+    delay(60000);
+    localSeconds += 60;
 }
 
 // send an NTP request to the time server at the given address
