@@ -1,3 +1,38 @@
+/*
+ * esp8266-clockradio
+ * 
+ * Turn an ESP8266 featherboard[1] + Music Maker FeatherWing[2] + Quad/Alphanumeric FeatherWing[3] into a clock radio.
+ * 
+ * TODO: Code still required for music & alarm support
+ * TODO: Instead of the Music Maker Featherwing, integrate Si463x[4] for AM/FM radio
+ * 
+ * [1] https://www.adafruit.com/product/2821
+ * [2] https://www.adafruit.com/product/3357
+ * [3] https://www.adafruit.com/product/3127
+ * [4] https://www.silabs.com/products/audio-and-radio/automotive-tuners/si463x-single-chip-digital-receivers
+ * 
+ * 
+ * Copyright (c) 2019 Adam McDaniel
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include "ht16k33.h"
