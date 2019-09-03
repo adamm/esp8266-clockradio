@@ -173,8 +173,13 @@ void loop() {
 
     ht.sendLed();
 
-    delay(60000);
-    localSeconds += 60;
+    uint8_t delaySeconds = 60 - seconds;
+    Serial.print("Sleeping for ");
+    Serial.print(delaySeconds);
+    Serial.println(" seconds.");
+
+    delay(delaySeconds * 1000);
+    localSeconds += delaySeconds;
 }
 
 // send an NTP request to the time server at the given address
