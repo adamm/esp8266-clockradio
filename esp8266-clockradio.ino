@@ -161,6 +161,10 @@ void loop() {
     Serial.print(":");
     Serial.println(seconds);
 
+    // Flash at 5pm... it's time to go home!
+    if (hours == 17)
+        ht.setBlinkRate(HT16K33_DSP_BLINK05HZ);
+
     if (hours >= 10)
         ht.set16Seg(0, digits[int(hours / 10)]);
     else
