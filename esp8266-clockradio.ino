@@ -131,10 +131,16 @@ void setup() {
         localSeconds = epoch + gmtOffset_sec;
     }
 
+
+    // XXX: Unfortunately Forcing the wifi to disconnect and then sleep can cause a random watchdog reset 
+    // See https://github.com/esp8266/Arduino/issues/6172
+    // For skip the disconnect until this bug is fixed.
+
     Serial.println("Modem to sleep!");
-    WiFi.disconnect();
+    // WiFi.disconnect();
     WiFi.mode(WIFI_OFF);
     WiFi.forceSleepBegin();
+
     delay(1);
 }
 
@@ -178,8 +184,16 @@ void loop() {
     Serial.print(delaySeconds);
     Serial.println(" seconds.");
 
-    delay(delaySeconds * 1000);
     localSeconds += delaySeconds;
+#ifdef DEBUG
+    while (delaySeconds-- >= 1) {
+        Serial.print("Waiting: ");
+        Serial.println(delaySeconds);
+        delay(1000);
+    }
+#else
+    delay(delaySeconds * 1000);
+#endif
 }
 
 // send an NTP request to the time server at the given address
