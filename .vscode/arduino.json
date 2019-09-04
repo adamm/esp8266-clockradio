@@ -1,8 +1,8 @@
 {
     "output": "/tmp/arduino",
     "board": "esp8266:esp8266:huzzah",
-    "configuration": "xtal=80,vt=flash,exception=disabled,ssl=all,eesz=4M,ip=lm2f,dbg=Serial,lvl=None____,wipe=none,baud=115200",
+    "configuration": "xtal=80,vt=flash,exception=disabled,ssl=all,eesz=4M,ip=lm2f,dbg=Serial,lvl=CORE,wipe=none,baud=460800",
     "port": "/dev/cu.SLAB_USBtoUART",
-    "sketch": "arduino-clockradio.ino",
+    "sketch": "esp8266-clockradio.ino",
     "programmer": "AVR ISP"
 }
