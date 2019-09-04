@@ -97,9 +97,9 @@ void setup() {
 
     sendNTPpacket(ntpServerIP); // send an NTP packet to a time server
     // wait to see if a reply is available
-    delay(1000);
+    delay(2000);
 
-      int cb = udp.parsePacket();
+    int cb = udp.parsePacket();
     if (!cb) {
         Serial.println("no packet yet");
     } else {
@@ -128,7 +128,7 @@ void setup() {
         // print Unix time:
         Serial.println(epoch);
 
-        localSeconds = epoch + gmtOffset_sec;
+        localSeconds = epoch + gmtOffset_sec + 2;  // extra two seconds to offset the 2000ms delay above
     }
 
 
