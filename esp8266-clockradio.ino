@@ -43,7 +43,7 @@ const char* ssid       = SECRET_SSID;
 const char* password   = SECRET_PASS;
 
 const unsigned int localPort = 2390;      // local port to listen for UDP packets
-const char* ntpServerName = "pool.ntp.org";
+const char* ntpServerName = "time.nrc.ca";
 IPAddress   ntpServerIP;
 
 const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
@@ -61,7 +61,7 @@ void setup() {
 
     ht.begin(0x01);
     ht.define16segFont((uint16_t *)&fontTable);
-    ht.setBrightness(5);
+    ht.setBrightness(7);
 
     ht.set16Seg(0, 'T');
     ht.set16Seg(1, 'i');
