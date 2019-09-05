@@ -198,6 +198,16 @@ void loop() {
 #else
     delay(delaySeconds * 1000);
 #endif
+
+    // At 5:30, shutdown the display.
+    if (hours >= 17 && minutes >= 30) {
+        Serial.println("Display off");
+        ht.displayOff();
+        Serial.println("Display Sleep");
+        ht.sleep();
+        // Wake up again at 9am tomorrow morning
+        ESP.deepSleep(55800e6);
+    }
 }
 
 // send an NTP request to the time server at the given address
