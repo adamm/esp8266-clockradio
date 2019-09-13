@@ -42,6 +42,11 @@
 const char* ssid       = SECRET_SSID;
 const char* password   = SECRET_PASS;
 
+#define SLEEP_TIME_HOURS   17
+#define SLEEP_TIME_MINUTES 10
+#define WAKEUP_TIME_HOURS   9
+#define WAKEUP_TIME_MINUTES 0
+
 const unsigned int localPort = 2390;      // local port to listen for UDP packets
 const char* ntpServerName = "time.nrc.ca";
 IPAddress   ntpServerIP;
@@ -63,10 +68,10 @@ void setup() {
     ht.define16segFont((uint16_t *)&fontTable);
     ht.setBrightness(7);
 
-    ht.set16Seg(0, 'T');
-    ht.set16Seg(1, 'i');
-    ht.set16Seg(2, 'm');
-    ht.set16Seg(3, 'e');
+    ht.set16Seg(0, 'N');
+    ht.set16Seg(1, 'T');
+    ht.set16Seg(2, 'P');
+    ht.set16Seg(3, '*');
     ht.sendLed();
 
     // Initialize Wifi
@@ -163,7 +168,7 @@ void loop() {
 
     // Flash at 5pm... it's time to go home!
     if (hours == 17)
-        ht.setBlinkRate(HT16K33_DSP_BLINK05HZ);
+        ht.setBlinkRate(HT16K33_DSP_BLINK1HZ);
 
     if (hours >= 10)
         ht.set16Seg(0, digits[int(hours / 10)]);
@@ -199,14 +204,26 @@ void loop() {
     delay(delaySeconds * 1000);
 #endif
 
-    // At 5:30, shutdown the display.
-    if (hours >= 17 && minutes >= 30) {
+    // At SLEEP_TIME, or anytime after, shutdown the display.
+    if ((hours == SLEEP_TIME_HOURS && minutes >= SLEEP_TIME_MINUTES) ||
+         hours  > SLEEP_TIME_HOURS) {
+        int wakeupSeconds = 0;
+
+        // Calculate seconds until 9am tomorrow.
+        wakeupSeconds =  (24 - hours) * 3600;
+        wakeupSeconds += (60 - minutes) * 60;
+        wakeupSeconds += WAKEUP_TIME_HOURS * 3600;
+        wakeupSeconds += WAKEUP_TIME_MINUTES * 60;
+
         Serial.println("Display off");
         ht.displayOff();
         Serial.println("Display Sleep");
         ht.sleep();
         // Wake up again at 9am tomorrow morning
-        ESP.deepSleep(55800e6);
+        Serial.print("Deep sleep for ");
+        Serial.print(wakeupSeconds);
+        Serial.println(" seconds");
+        ESP.deepSleep(wakeupSeconds * 1e6);
     }
 }
 
