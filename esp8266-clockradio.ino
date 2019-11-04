@@ -54,8 +54,7 @@ IPAddress   ntpServerIP;
 const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
 byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
 
-const long  gmtOffset_sec = -6 * 3600;
-const int   daylightOffset_sec = 3600;
+const long  gmtOffset_sec = -7 * 3600;
 unsigned long localSeconds = 0;
 
 WiFiUDP udp;
