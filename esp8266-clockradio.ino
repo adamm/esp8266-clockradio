@@ -66,6 +66,9 @@ const long  mdtOffset_sec = -6 * 3600;
 WiFiUDP udp;
 HT16K33 ht;
 
+// An arbitrary function at NULL pointer forces the hardware to be reset.
+void (*reset)(void) = 0;
+
 void setup() {
     Serial.begin(115200);
 
@@ -112,6 +115,13 @@ void setup() {
     int cb = udp.parsePacket();
     if (!cb) {
         Serial.println("no packet yet");
+        // Unable to connect, force reset everything and try again.
+        ht.set16Seg(0, 'R');
+        ht.set16Seg(1, 't');
+        ht.set16Seg(2, 'r');
+        ht.set16Seg(3, 'y');
+        ht.sendLed();
+        reset();
     } else {
         Serial.print("packet received, length=");
         Serial.println(cb);
