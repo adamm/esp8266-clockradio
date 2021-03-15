@@ -48,11 +48,11 @@ const char* password   = SECRET_PASS;
 #define WAKEUP_TIME_MINUTES 0
 
 const unsigned int localPort = 2390;      // local port to listen for UDP packets
-const char* ntpServerName = "time.nrc.ca";
+const char* ntpServerName = "ca.pool.ntp.org";
 IPAddress   ntpServerIP;
 
 const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
-byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
+byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
 unsigned long localSeconds = 0;
 
 const long dstEnabledOnEpoch  = 1615716000; // March 14 2021 10am UTC
