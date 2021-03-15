@@ -53,9 +53,15 @@ IPAddress   ntpServerIP;
 
 const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
 byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
-
-const long  gmtOffset_sec = -7 * 3600;
 unsigned long localSeconds = 0;
+
+const long dstEnabledOnEpoch  = 1615716000; // March 14 2021 10am UTC
+const long dstEnabledSeconds  = 10886400;   // DST Enabled for 5 months 7 days
+const long dstDisabledSeconds = 20563200;   // DST Disabled for 8 months 27 days
+
+// Mountain Standard Time and Mountain Daylight Time offsets from GMT by seconds.
+const long  mstOffset_sec = -7 * 3600;
+const long  mdtOffset_sec = -6 * 3600;
 
 WiFiUDP udp;
 HT16K33 ht;
@@ -120,19 +126,47 @@ void setup() {
         // combine the four bytes (two words) into a long integer
         // this is NTP time (seconds since Jan 1 1900):
         unsigned long secsSince1900 = highWord << 16 | lowWord;
-        Serial.print("Seconds since Jan 1 1900 = ");
+        Serial.print("Seconds since Jan 1 1900 UTC = ");
         Serial.println(secsSince1900);
 
         // now convert NTP time into everyday time:
-        Serial.print("Unix time = ");
         // Unix time starts on Jan 1 1970. In seconds, that's 2208988800:
         const unsigned long seventyYears = 2208988800UL;
         // subtract seventy years:
-        unsigned long epoch = secsSince1900 - seventyYears;
-        // print Unix time:
+        time_t epoch = secsSince1900 - seventyYears;
+
+        Serial.print("Seconds since Jan 1 1970 UTC = ");
         Serial.println(epoch);
 
-        localSeconds = epoch + gmtOffset_sec + 2;  // extra two seconds to offset the 2000ms delay above
+        // Attempt to calculate whether Daylight Savings Time is enabled using deltas
+        uint8_t dstEnabled = 0;
+        time_t checkDstEpoch = dstEnabledOnEpoch;
+
+        while (epoch > checkDstEpoch) {
+          if (!dstEnabled) {
+            checkDstEpoch += dstEnabledSeconds;
+            dstEnabled = 1;
+          }
+          else {
+            checkDstEpoch += dstDisabledSeconds;
+            dstEnabled = 0;
+          }
+        }
+
+        Serial.print("DST is ");
+        Serial.println(dstEnabled ? "enabled" : "disabled");
+
+        Serial.print("Adjusting epoch by ");
+        Serial.println(dstEnabled ? mdtOffset_sec : mstOffset_sec);
+
+        Serial.print("Seconds since Jan 1 1970 ");
+        Serial.print(dstEnabled ? "MDT" : "MST");
+
+        localSeconds = epoch + (dstEnabled ? mdtOffset_sec : mstOffset_sec);
+        Serial.print(" = ");
+        Serial.println(localSeconds);
+
+        localSeconds += 2;  // extra two seconds to offset the 2000ms delay accessing NTP
     }
 
 
