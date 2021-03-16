@@ -53,7 +53,6 @@ IPAddress   ntpServerIP;
 
 const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
 byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
-uint32_t localSeconds = 0;
 
 uint8_t hours = 0;
 uint8_t minutes = 0;
@@ -64,13 +63,14 @@ const uint32_t dstEnabledSeconds  = 10886400;   // DST Enabled for 5 months 7 da
 const uint32_t dstDisabledSeconds = 20563200;   // DST Disabled for 8 months 27 days
 
 // Mountain Standard Time and Mountain Daylight Time offsets from GMT by seconds.
-const uint32_t mstOffset_sec = -7 * 3600;
-const uint32_t mdtOffset_sec = -6 * 3600;
+const int32_t mstOffset_sec = -7 * 3600;
+const int32_t mdtOffset_sec = -6 * 3600;
 
 struct {
   uint32_t crc32;
-  uint32_t epoch;
-  uint32_t refresh;
+  uint32_t now;
+  uint32_t wakeupAt;
+  uint32_t refreshNTP;
 } rtcData;
 
 WiFiUDP udp;
@@ -81,29 +81,22 @@ void (*reset)(void) = 0;
 
 
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(74880);
 
     ht.begin(0x01);
     ht.define16segFont((uint16_t *)&fontTable);
     ht.setBrightness(7);
 
-    uint8_t goodRTC = loadMemory();
     uint8_t goodNTP = 0;
 
-    if (goodRTC) {
+    if (loadMemory()) {
         // If our memory is good, and we're under the refresh NTP time,
-        // exit setup right away and jump to the loop()
-        Serial.print("rtcData.epoch = ");
-        Serial.println(rtcData.epoch);
-        Serial.print("rtcData.refresh = ");
-        Serial.println(rtcData.refresh);
-
-        localSeconds = rtcData.epoch;
-        if (rtcData.epoch < rtcData.refresh)
+        // mark NTP as good.
+        if (0 < rtcData.now && rtcData.now < rtcData.refreshNTP)
             goodNTP = 1;
     }
-
-    if (!goodRTC) {
+    else {
+        clearMemory();
         ht.set16Seg(0, 'N');
         ht.set16Seg(1, 'T');
         ht.set16Seg(2, 'P');
@@ -111,23 +104,43 @@ void setup() {
         ht.sendLed();
     }
 
-    if (!goodNTP) {
-        getTimeFromNTP();  // sets localSeconds
+    if (!goodNTP)
+        getTimeFromNTP();  // sets rtcData.now and rtcData.refreshNTP
+
+    hours = (rtcData.now % 86400L) / 3600;
+    minutes = (rtcData.now % 3600) / 60;
+    seconds = rtcData.now % 60;
+
+    Serial.print("rtcData.now = ");
+    Serial.println(rtcData.now);
+    Serial.print("rtcData.refreshNTP = ");
+    Serial.println(rtcData.refreshNTP);
+    Serial.print("rtcData.wakeupAt = ");
+    Serial.println(rtcData.wakeupAt);
+
+    if (0 < rtcData.wakeupAt && rtcData.wakeupAt < rtcData.now) {
+        Serial.println("Woke up too soon! Back to bed.");
+        longSleep(); // Woke up too soon.  Go back to sleep!
+                     // Refreshes rtcData.wakeupAt if needed, too.
     }
+
+    // The RTC memory is good, NTP is good, and we're supposed to be awake! Update the display in loop();
 }
 
 
 void loop() {
-    hours = (localSeconds % 86400L)/ 3600;
-    minutes = (localSeconds % 3600) / 60;
-    seconds = localSeconds % 60;
+    hours = (rtcData.now % 86400L) / 3600;
+    minutes = (rtcData.now % 3600) / 60;
+    seconds = rtcData.now % 60;
 
     updateDisplay();
 
     // At SLEEP_TIME, or anytime after, shutdown the display.
     if ((hours == SLEEP_TIME_HOURS && minutes >= SLEEP_TIME_MINUTES) ||
-         hours  > SLEEP_TIME_HOURS)
+         hours  > SLEEP_TIME_HOURS)  {
+        Serial.println("After working hours..");
         longSleep();
+    }
     else
         shortSleep();
 }
@@ -225,14 +238,13 @@ uint32_t getTimeFromNTP(){
         Serial.print("Seconds since Jan 1 1970 ");
         Serial.print(dstEnabled ? "MDT" : "MST");
 
-        localSeconds = epoch + (dstEnabled ? mdtOffset_sec : mstOffset_sec);
+        rtcData.now = epoch + (dstEnabled ? mdtOffset_sec : mstOffset_sec);
         Serial.print(" = ");
-        Serial.println(localSeconds);
+        Serial.println(rtcData.now);
 
-        localSeconds += 2;  // extra two seconds to offset the 2000ms delay accessing NTP
+        rtcData.now += 2;  // extra two seconds to offset the 2000ms delay accessing NTP
 
-        rtcData.epoch = localSeconds;
-        rtcData.refresh = localSeconds + 3600; // Force an NTP refresh in an hour
+        rtcData.refreshNTP = rtcData.now + 300; // Force an NTP refresh in an hour
     }
 
 
@@ -288,11 +300,12 @@ void updateDisplay() {
 void shortSleep() {
     uint8_t delaySeconds = 60 - seconds;
 
-    Serial.print("Sleeping for ");
+    Serial.print("Short sleeping for ");
     Serial.print(delaySeconds);
     Serial.println(" seconds.");
 
-    rtcData.epoch += delaySeconds;
+    rtcData.wakeupAt = 0;
+    rtcData.now += delaySeconds;
     saveMemory();
 
     Serial.print("Deep sleep with screen on for ");
@@ -303,29 +316,45 @@ void shortSleep() {
 
 
 void longSleep() {
-    int wakeupSeconds = 0;
+    uint32_t delaySeconds = 0;
+    uint32_t maxSeconds = 12000; // (uint32_t)(ESP.deepSleepMax() / 1e6) - 10;
 
     // Calculate seconds until 9am tomorrow.
-    wakeupSeconds =  (24 - hours) * 3600;
-    wakeupSeconds += (60 - minutes) * 60;
-    wakeupSeconds += (60 - seconds);
-    wakeupSeconds += WAKEUP_TIME_HOURS * 3600;
-    wakeupSeconds += WAKEUP_TIME_MINUTES * 60;
+    delaySeconds =  (24 - hours) * 3600;
+    delaySeconds += (60 - minutes) * 60;
+    delaySeconds += (60 - seconds);
+    delaySeconds += WAKEUP_TIME_HOURS * 3600;
+    delaySeconds += WAKEUP_TIME_MINUTES * 60;
 
-    rtcData.epoch += wakeupSeconds;
+    Serial.print("Next wakeup in ");
+    Serial.print(delaySeconds);
+    Serial.println(" seconds.");
 
-    Serial.println("Display off");
+    // Force NTP to refresh on longSleep() wakeup. 
+    // If we woke-up too soon (now < wakeupAt) then go back to sleep during setup().
+    rtcData.wakeupAt = rtcData.now + delaySeconds;
+    rtcData.now = 0;
+    saveMemory();
+    ht.clearAll();
+
+    Serial.print("ESP.deepSleepMax() = ");
+    Serial.println(maxSeconds);
+    if (delaySeconds > maxSeconds) {
+        delaySeconds = maxSeconds;
+    }
+
+    Serial.print("Long sleeping for ");
+    Serial.print(delaySeconds);
+    Serial.println(" seconds.");
+
     ht.displayOff();
-    Serial.println("Display Sleep");
     ht.sleep();
     // Wake up again at 9am tomorrow morning
     Serial.print("Deep sleep for ");
-    Serial.print(wakeupSeconds);
+    Serial.print(delaySeconds);
     Serial.println(" seconds");
 
-    clearMemory(); // to force an NTP reset
-
-    ESP.deepSleep(wakeupSeconds * 1e6);
+    ESP.deepSleep(delaySeconds * 1e6);
 }
 
 
@@ -378,16 +407,19 @@ void saveMemory() {
     // Generate new data set for the struct
     memset(&rtcData, sizeof(rtcData), '\0');
 
-    Serial.print("rtcData.epoch = ");
-    Serial.println(rtcData.epoch);
-    Serial.print("rtcData.refresh = ");
-    Serial.println(rtcData.refresh);
+    Serial.println("SAVING:");
+    Serial.print("rtcData.now = ");
+    Serial.println(rtcData.now);
+    Serial.print("rtcData.refreshNTP = ");
+    Serial.println(rtcData.refreshNTP);
+    Serial.print("rtcData.wakeupAt = ");
+    Serial.println(rtcData.wakeupAt);
 
     // Update CRC32 of data
-    rtcData.crc32 = calculateCRC32((uint8_t*) &rtcData.epoch, sizeof(rtcData)-sizeof(rtcData.crc32));
+    rtcData.crc32 = calculateCRC32((uint8_t*) &rtcData.now, sizeof(rtcData)-sizeof(rtcData.crc32));
     // Write struct to RTC memory
     if (ESP.rtcUserMemoryWrite(0, (uint32_t*) &rtcData, sizeof(rtcData))) {
-        Serial.println("Write: ");
+        Serial.print("Write: ");
         printMemory();
         Serial.println();
     }
@@ -397,10 +429,10 @@ void saveMemory() {
 uint8_t loadMemory() {
     // Read struct from RTC memory
     if (ESP.rtcUserMemoryRead(0, (uint32_t*) &rtcData, sizeof(rtcData))) {
-        Serial.println("Read: ");
+        Serial.print("Read: ");
         printMemory();
         Serial.println();
-        uint32_t crcOfData = calculateCRC32((uint8_t*) &rtcData.epoch, sizeof(rtcData)-sizeof(rtcData.crc32));
+        uint32_t crcOfData = calculateCRC32((uint8_t*) &rtcData.now, sizeof(rtcData)-sizeof(rtcData.crc32));
         Serial.print("CRC32 of data: ");
         Serial.println(crcOfData, HEX);
         Serial.print("CRC32 read from RTC: ");
