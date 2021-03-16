@@ -51,11 +51,6 @@ void HT16K33::begin(uint8_t address){
   i2c_write(HT16K33_SS  | HT16K33_SS_NORMAL); // Wakeup
   i2c_write(HT16K33_DSP | HT16K33_DSP_ON | HT16K33_DSP_NOBLINK); // Display on and no blinking
   i2c_write(HT16K33_RIS | HT16K33_RIS_OUT); // INT pin works as row output 
-  i2c_write(HT16K33_DIM | HT16K33_DIM_16);  // Brightness set to max
-  //Clear all lights
-  //  memset(displayRam,0,sizeof(displayRam));
-  //  i2c_write(HT16K33_DDAP, displayRam,sizeof(displayRam),true);
-  clearAll();
 } // begin
 
 /****************************************************************/
