@@ -104,19 +104,28 @@ void setup() {
         ht.sendLed();
     }
 
-    if (!goodNTP)
-        getTimeFromNTP();  // sets rtcData.now and rtcData.refreshNTP
-
+    Serial.print("The assumed time is: ");
     hours = (rtcData.now % 86400L) / 3600;
     minutes = (rtcData.now % 3600) / 60;
     seconds = rtcData.now % 60;
+    Serial.printf("%02d:%02d:%02d\n", hours, minutes, seconds);
 
-    Serial.print("rtcData.now = ");
-    Serial.println(rtcData.now);
-    Serial.print("rtcData.refreshNTP = ");
-    Serial.println(rtcData.refreshNTP);
-    Serial.print("rtcData.wakeupAt = ");
-    Serial.println(rtcData.wakeupAt);
+    if (!goodNTP) {
+        uint32_t rtcDataAssumed = rtcData.now;
+        int32_t rtcDrift = 0;
+        getTimeFromNTP();  // sets rtcData.now and rtcData.refreshNTP
+        Serial.print("The confirmed time is: ");
+        hours = (rtcData.now % 86400L) / 3600;
+        minutes = (rtcData.now % 3600) / 60;
+        seconds = rtcData.now % 60;
+        Serial.printf("%02d:%02d:%02d\n", hours, minutes, seconds);
+        rtcDrift = rtcDataAssumed - rtcData.now;
+        Serial.print("Drift of ");
+        Serial.print(rtcDrift);
+        Serial.println(" seconds");
+    }
+    else {
+    }
 
     if (0 < rtcData.wakeupAt && rtcData.wakeupAt < rtcData.now) {
         Serial.println("Woke up too soon! Back to bed.");
@@ -161,7 +170,7 @@ uint32_t getTimeFromNTP(){
     Serial.println("");
 
     Serial.println("WiFi connected");
-    Serial.println("IP address: ");
+    Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 
     Serial.println("Starting UDP");
@@ -244,7 +253,7 @@ uint32_t getTimeFromNTP(){
 
         rtcData.now += 2;  // extra two seconds to offset the 2000ms delay accessing NTP
 
-        rtcData.refreshNTP = rtcData.now + 300; // Force an NTP refresh in an hour
+        rtcData.refreshNTP = rtcData.now + 3600; // Force an NTP refresh in an hour
     }
 
 
@@ -264,14 +273,6 @@ uint32_t getTimeFromNTP(){
 void updateDisplay() {
     // Update Clock Display
     const char* digits = "0123456789";
-
-    // print the hour, minute and second:
-    Serial.print("The time is ");       // UTC is the time at Greenwich Meridian (GMT)
-    Serial.print(hours);
-    Serial.print(":");
-    Serial.print(minutes);
-    Serial.print(":");
-    Serial.println(seconds);
 
     // Flash at 5pm... it's time to go home!
     if (hours == SLEEP_TIME_HOURS)
@@ -299,10 +300,6 @@ void updateDisplay() {
 
 void shortSleep() {
     uint8_t delaySeconds = 60 - seconds;
-
-    Serial.print("Short sleeping for ");
-    Serial.print(delaySeconds);
-    Serial.println(" seconds.");
 
     rtcData.wakeupAt = 0;
     rtcData.now += delaySeconds;
@@ -407,21 +404,14 @@ void saveMemory() {
     // Generate new data set for the struct
     memset(&rtcData, sizeof(rtcData), '\0');
 
-    Serial.println("SAVING:");
-    Serial.print("rtcData.now = ");
-    Serial.println(rtcData.now);
-    Serial.print("rtcData.refreshNTP = ");
-    Serial.println(rtcData.refreshNTP);
-    Serial.print("rtcData.wakeupAt = ");
-    Serial.println(rtcData.wakeupAt);
+    Serial.printf("SAVING rtcData.now = %lu, refreshNTP = %lu, wakeupAt = %lu\n", rtcData.now, rtcData.refreshNTP, rtcData.wakeupAt);
 
     // Update CRC32 of data
     rtcData.crc32 = calculateCRC32((uint8_t*) &rtcData.now, sizeof(rtcData)-sizeof(rtcData.crc32));
     // Write struct to RTC memory
     if (ESP.rtcUserMemoryWrite(0, (uint32_t*) &rtcData, sizeof(rtcData))) {
-        Serial.print("Write: ");
-        printMemory();
-        Serial.println();
+//        Serial.print("RTC Write: ");
+//        printMemory();
     }
 }
 
@@ -429,18 +419,18 @@ void saveMemory() {
 uint8_t loadMemory() {
     // Read struct from RTC memory
     if (ESP.rtcUserMemoryRead(0, (uint32_t*) &rtcData, sizeof(rtcData))) {
-        Serial.print("Read: ");
-        printMemory();
-        Serial.println();
+//        Serial.print("RTC Read: ");
+//        printMemory();
         uint32_t crcOfData = calculateCRC32((uint8_t*) &rtcData.now, sizeof(rtcData)-sizeof(rtcData.crc32));
-        Serial.print("CRC32 of data: ");
-        Serial.println(crcOfData, HEX);
-        Serial.print("CRC32 read from RTC: ");
-        Serial.println(rtcData.crc32, HEX);
+//        Serial.print("CRC32 of data: ");
+//        Serial.println(crcOfData, HEX);
+//        Serial.print("CRC32 read from RTC: ");
+//        Serial.println(rtcData.crc32, HEX);
         if (crcOfData != rtcData.crc32) {
             Serial.println("CRC32 in RTC memory doesn't match CRC32 of data. Data is probably invalid!");
         } else {
             Serial.println("CRC32 check ok, data is probably valid.");
+            Serial.printf("LOADING rtcData.now = %lu, refreshNTP = %lu, wakeupAt = %lu\n", rtcData.now, rtcData.refreshNTP, rtcData.wakeupAt);
         }
         return (crcOfData == rtcData.crc32);
     }

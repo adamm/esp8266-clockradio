@@ -4,7 +4,8 @@
     "configuration": "xtal=80,vt=flash,exception=disabled,ssl=all,eesz=4M,ip=lm2f,dbg=Serial,lvl=CORE,wipe=none,baud=230400",
     "port": "/dev/tty.SLAB_USBtoUART",
     "sketch": "esp8266-clockradio.ino",
-    "logLevel": "verbose",
+    "logLevel": "info",
+    "enableUSBDetection": false,
     "defaultBaudRate": 74880,
     "programmer": "AVR ISP"
 }
