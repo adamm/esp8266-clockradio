@@ -48,6 +48,12 @@ const char* password   = SECRET_PASS;
 #define WAKEUP_TIME_HOURS   8
 #define WAKEUP_TIME_MINUTES 0
 
+// ESP8266's reports its maximum deep-sleep length is longer than actually allowed, forcing
+// the device to sleep until manual reset. Reduce returned value by 5% to ensure validity.
+#define MAX_SLEEP_SECONDS   (uint32_t)(ESP.deepSleepMax()*0.95/1e6)
+#define NTP_REFRESH_SECONDS MAX_SLEEP_SECONDS/2
+
+
 const unsigned int localPort = 2390;      // local port to listen for UDP packets
 const char* ntpServerName = "ca.pool.ntp.org";
 IPAddress   ntpServerIP;
@@ -243,7 +249,7 @@ time_t getTimeFromNTP(){
         Serial.print(" = ");
         Serial.println(rtcData.now);
 
-        rtcData.refreshNTP = rtcData.now + 3600; // Force an NTP refresh in an hour
+        rtcData.refreshNTP = rtcData.now + NTP_REFRESH_SECONDS; // Force an NTP refresh in an hour
     }
 
 
@@ -304,7 +310,7 @@ void shortSleep() {
 
 void longSleep() {
     uint32_t delaySeconds = 0;
-    uint32_t maxSeconds = (uint32_t)(ESP.deepSleepMax()/1e6);
+    uint32_t maxSeconds = MAX_SLEEP_SECONDS;
 
     // If we're being asked to sleep and no wakeupAt time set...
     if (rtcData.wakeupAt == 0) {
@@ -332,7 +338,7 @@ void longSleep() {
         Serial.printf("...which is %s\n", getTimeStr(rtcData.now+delaySeconds));
     }
 
-    rtcData.now = 0;
+    rtcData.now += delaySeconds;
     saveMemory();
 
     ht.clearAll();
