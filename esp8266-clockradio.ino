@@ -120,7 +120,7 @@ void setup() {
         Serial.printf("The actual time is %s\n", getTimeStr(rtcData.now));
 
         rtcDrift = rtcDataAssumed - rtcData.now;
-        Serial.printf("Drift of %ld seconds\n", rtcDrift);
+        Serial.printf("Drift of %ld seconds\n", (long) rtcDrift);
     }
 
     Serial.printf("The next refresh at %s\n", getTimeStr(rtcData.refreshNTP));
@@ -383,14 +383,21 @@ uint32_t calculateCRC32(const uint8_t *data, size_t length) {
 }
 
 
-void saveMemory() {
-    // Generate new data set for the struct
-    memset(&rtcData, sizeof(rtcData), '\0');
+// CRC32 of every rtcData field after crc32. Measured from the offset of 'now' because
+// 64-bit time_t adds alignment padding after crc32, so sizeof(rtcData)-sizeof(crc32)
+// would run past the end of the struct.
+uint32_t calculateRtcDataCRC32() {
+    return calculateCRC32((const uint8_t*) &rtcData.now,
+                          sizeof(rtcData) - offsetof(struct rtcData, now));
+}
 
-    Serial.printf("SAVING  rtcData.now = %lu, refreshNTP = %lu, wakeupAt = %lu\n", rtcData.now, rtcData.refreshNTP, rtcData.wakeupAt);
+
+void saveMemory() {
+    Serial.printf("SAVING  rtcData.now = %lu, refreshNTP = %lu, wakeupAt = %lu\n",
+                  (unsigned long) rtcData.now, (unsigned long) rtcData.refreshNTP, (unsigned long) rtcData.wakeupAt);
 
     // Update CRC32 of data
-    rtcData.crc32 = calculateCRC32((uint8_t*) &rtcData.now, sizeof(rtcData)-sizeof(rtcData.crc32));
+    rtcData.crc32 = calculateRtcDataCRC32();
     // Write struct to RTC memory
     if (ESP.rtcUserMemoryWrite(0, (uint32_t*) &rtcData, sizeof(rtcData))) {
 //        Serial.print("RTC Write: ");
@@ -404,7 +411,7 @@ uint8_t loadMemory() {
     if (ESP.rtcUserMemoryRead(0, (uint32_t*) &rtcData, sizeof(rtcData))) {
         Serial.print("RTC Read: ");
         printMemory();
-        uint32_t crcOfData = calculateCRC32((uint8_t*) &rtcData.now, sizeof(rtcData)-sizeof(rtcData.crc32));
+        uint32_t crcOfData = calculateRtcDataCRC32();
 //        Serial.print("CRC32 of data: ");
 //        Serial.println(crcOfData, HEX);
 //        Serial.print("CRC32 read from RTC: ");
@@ -413,7 +420,8 @@ uint8_t loadMemory() {
             Serial.println("CRC32 in RTC memory doesn't match CRC32 of data. Data is probably invalid!");
         } else {
             Serial.println("CRC32 check ok, data is probably valid.");
-            Serial.printf("LOADING rtcData.now = %lu, refreshNTP = %lu, wakeupAt = %lu\n", rtcData.now, rtcData.refreshNTP, rtcData.wakeupAt);
+            Serial.printf("LOADING rtcData.now = %lu, refreshNTP = %lu, wakeupAt = %lu\n",
+                  (unsigned long) rtcData.now, (unsigned long) rtcData.refreshNTP, (unsigned long) rtcData.wakeupAt);
         }
         return (crcOfData == rtcData.crc32);
     }
