@@ -263,6 +263,8 @@ time_t getTimeFromNTP(){
     WiFi.forceSleepBegin();
 
     delay(1);
+
+    return rtcData.now;
 }
 
 

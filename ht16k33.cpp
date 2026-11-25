@@ -200,6 +200,7 @@ boolean HT16K33::getLed(uint8_t ledno,boolean Fresh){
   if (ledno>=0 && ledno<128){
     return bitRead(displayRam[int(ledno/8)],ledno % 8) != 0;
   }
+  return false;
 } // getLed
 
 /****************************************************************/
