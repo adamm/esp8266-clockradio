@@ -65,17 +65,13 @@ uint8_t hours = 0;
 uint8_t minutes = 0;
 uint8_t seconds = 0;
 
-const time_t dstEnabledOnEpoch  = 1615716000; // March 14 2021 10am UTC
-const time_t dstEnabledSeconds  = 10886400;   // DST Enabled for 5 months 7 days
-const time_t dstDisabledSeconds = 20563200;   // DST Disabled for 8 months 27 days
-
-// Mountain Standard Time and Mountain Daylight Time offsets from GMT by seconds.
-const int32_t mstOffset_sec = -7 * 3600;
-const int32_t mdtOffset_sec = -6 * 3600;
+// Local timezone as a POSIX TZ string; localtime() does the conversion from UTC.
+// Alberta no longer observes DST and stays at UTC-6 year-round.
+#define TIMEZONE "<-06>6"
 
 struct rtcData {
   uint32_t crc32;
-  time_t now;
+  time_t now;         // UTC
   time_t wakeupAt;
   time_t refreshNTP;
 } rtcData;
@@ -89,6 +85,9 @@ void (*reset)(void) = 0;
 
 void setup() {
     Serial.begin(74880);
+
+    setenv("TZ", TIMEZONE, 1);
+    tzset();
 
     ht.begin(0x01);
     ht.define16segFont((uint16_t *)&fontTable);
@@ -139,9 +138,10 @@ void setup() {
 
 
 void loop() {
-    hours = (rtcData.now % 86400L) / 3600;
-    minutes = (rtcData.now % 3600) / 60;
-    seconds = rtcData.now % 60;
+    struct tm* lt = localtime(&rtcData.now);
+    hours = lt->tm_hour;
+    minutes = lt->tm_min;
+    seconds = lt->tm_sec;
 
     updateDisplay();
 
@@ -223,31 +223,7 @@ time_t getTimeFromNTP(){
         Serial.print("Seconds since Jan 1 1970 UTC = ");
         Serial.println(epoch);
 
-        // Attempt to calculate whether Daylight Savings Time is enabled using deltas
-        uint8_t dstEnabled = 0;
-        time_t checkDstEpoch = dstEnabledOnEpoch;
-
-        while (epoch > checkDstEpoch) {
-          if (!dstEnabled) {
-            checkDstEpoch += dstEnabledSeconds;
-            dstEnabled = 1;
-          }
-          else {
-            checkDstEpoch += dstDisabledSeconds;
-            dstEnabled = 0;
-          }
-        }
-
-        Serial.print("DST is ");
-        Serial.print(dstEnabled ? "enabled" : "disabled");
-        Serial.print(". Adjusting epoch by ");
-        Serial.println(dstEnabled ? mdtOffset_sec : mstOffset_sec);
-        Serial.print("Seconds since Jan 1 1970 ");
-        Serial.print(dstEnabled ? "MDT" : "MST");
-
-        rtcData.now = epoch + (dstEnabled ? mdtOffset_sec : mstOffset_sec);
-        Serial.print(" = ");
-        Serial.println(rtcData.now);
+        rtcData.now = epoch;
 
         rtcData.refreshNTP = rtcData.now + NTP_REFRESH_SECONDS; // Force an NTP refresh in an hour
     }
